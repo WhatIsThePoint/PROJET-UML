@@ -1,0 +1,299 @@
+@startuml
+title Diagramme de classes : système de gestion du complexe sportif
+
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam class {
+  BackgroundColor #F5F5F5
+  BorderColor #444444
+  ArrowColor #444444
+}
+hide empty members
+
+package "Utilisateurs" {
+abstract class Utilisateur {
+  - id : int
+  - nom : String
+  - prenom : String
+  - email : String
+  - telephone : String
+  - motDePasse : String
+  - statut : StatutCompte
+  + sAuthentifier() : boolean
+  + verifierCode(code : String) : boolean
+  + renvoyerCode() : void
+}
+
+class Client {
+  + creerCompte() : void
+  + consulterInstallations() : List<Installation>
+  + reserverCreneau(c : Creneau) : Reservation
+  + modifierReservation(r : Reservation) : void
+  + annulerReservation(r : Reservation) : void
+  + sInscrire(a : Activite) : Inscription
+  + annulerInscription(i : Inscription) : void
+  + souscrireAbonnement(t : Tarif) : Abonnement
+  + renouvelerAbonnement(a : Abonnement) : void
+  + payerEnLigne(p : Paiement) : void
+}
+
+class Coach {
+  - specialite : String
+  + consulterPlanning() : List<Cours>
+  + creerCours() : Cours
+  + modifierCours(c : Cours) : void
+  + annulerCours(c : Cours) : void
+  + consulterListeInscrits(c : Cours) : List<Inscription>
+  + marquerPresence(i : Inscription) : void
+}
+
+class Receptionniste {
+  + enregistrerReservation() : Reservation
+  + modifierReservation(r : Reservation) : void
+  + annulerReservation(r : Reservation) : void
+  + enregistrerPaiement(r : Reservation) : Paiement
+  + envoyerConfirmation(p : Paiement) : void
+}
+
+class Administrateur {
+  + gererInstallations() : void
+  + gererTarifs() : void
+  + gererUtilisateurs() : void
+  + creerTournoi() : Tournoi
+  + modifierTournoi(t : Tournoi) : void
+  + annulerTournoi(t : Tournoi) : void
+  + consulterStatistiques() : void
+}
+
+Utilisateur <|-- Client
+Utilisateur <|-- Coach
+Utilisateur <|-- Receptionniste
+Utilisateur <|-- Administrateur
+}
+
+' ===================== Installations =====================
+package "Installations et réservations" {
+class Installation {
+  - id : int
+  - nom : String
+  - sport : String
+  - type : TypeInstallation
+  - capacite : int
+  - actif : boolean
+  + ajouter() : void
+  + modifier() : void
+  + desactiver() : void
+  + verifierDisponibilite(c : Creneau) : boolean
+}
+
+class Horaire {
+  - jourSemaine : String
+  - heureOuverture : Time
+  - heureFermeture : Time
+}
+
+class Creneau {
+  - id : int
+  - date : Date
+  - heureDebut : Time
+  - heureFin : Time
+  - statut : StatutCreneau
+  + estDisponible() : boolean
+}
+
+Installation "1" *-- "1..*" Horaire : définit
+Installation "1" *-- "0..*" Creneau : propose
+
+class Reservation {
+  - id : int
+  - dateCreation : Date
+  - statut : StatutReservation
+  - canal : CanalReservation
+  - montant : double
+  + confirmer() : void
+  + modifier() : void
+  + annuler() : void
+}
+
+Client "1" -- "0..*" Reservation : effectue
+Receptionniste "0..1" -- "0..*" Reservation : enregistre
+Reservation "0..1" -- "1" Creneau : occupe
+Reservation "0..*" -- "1" Installation : concerne
+}
+
+' ===================== Activités =====================
+package "Activités" {
+abstract class Activite {
+  - id : int
+  - titre : String
+  - date : Date
+  - capacite : int
+  - statut : StatutActivite
+  + estComplete() : boolean
+}
+
+class Cours {
+  - niveau : String
+  + verifierDisponibiliteTerrain() : boolean
+}
+
+class Tournoi {
+  - dateDebut : Date
+  - dateFin : Date
+  - fraisInscription : double
+  - format : String
+  + reserverTerrains() : void
+}
+
+class Inscription {
+  - id : int
+  - dateInscription : Date
+  - statut : StatutInscription
+  - present : boolean
+  + annuler() : void
+}
+
+Activite <|-- Cours
+Activite <|-- Tournoi
+
+Coach "1" -- "0..*" Cours : anime
+Administrateur "1" -- "0..*" Tournoi : organise
+Activite "0..1" -- "1..*" Creneau : réserve
+Client "1" -- "0..*" Inscription : réalise
+Activite "1" -- "0..*" Inscription : reçoit
+}
+
+' ===================== Abonnements & tarifs =====================
+package "Abonnements et tarifs" {
+class Abonnement {
+  - id : int
+  - type : String
+  - dateDebut : Date
+  - dateFin : Date
+  - statut : StatutAbonnement
+  + renouveler() : void
+  + estActif() : boolean
+}
+
+class Tarif {
+  - id : int
+  - libelle : String
+  - montant : double
+  - sport : String
+  - typeClient : String
+  + definir() : void
+  + modifier() : void
+}
+
+class Promotion {
+  - code : String
+  - pourcentage : double
+  - dateDebut : Date
+  - dateFin : Date
+  + appliquer(t : Tarif) : double
+}
+
+Client "1" -- "0..*" Abonnement : souscrit
+Abonnement "0..*" -- "1" Tarif : basé sur
+Reservation "0..*" -- "1" Tarif : facturée selon
+Tarif "0..*" -- "0..*" Promotion : peut avoir
+}
+
+' ===================== Paiements =====================
+package "Paiements et communication" {
+class Paiement {
+  - id : int
+  - montant : double
+  - date : Date
+  - mode : ModePaiement
+  - statut : StatutPaiement
+  + enregistrer() : void
+  + genererRecu() : void
+}
+
+Paiement "0..*" -- "0..1" Reservation : règle
+Paiement "0..*" -- "0..1" Abonnement : règle
+Paiement "0..*" -- "0..1" Inscription : règle
+Receptionniste "0..1" -- "0..*" Paiement : enregistre
+
+' ===================== Authentification 2FA & notifications =====================
+class CodeVerification {
+  - code : String
+  - dateExpiration : DateTime
+  - canal : CanalEnvoi
+  - utilise : boolean
+  + estValide() : boolean
+}
+
+class Notification {
+  - id : int
+  - type : TypeNotification
+  - message : String
+  - dateEnvoi : DateTime
+  - canal : CanalEnvoi
+  + envoyer() : void
+}
+
+Utilisateur "1" -- "0..*" CodeVerification : reçoit
+Utilisateur "1" -- "0..*" Notification : reçoit
+}
+
+' ===================== Énumérations =====================
+package "Énumérations" {
+enum StatutCompte {
+  ACTIF
+  SUSPENDU
+}
+enum TypeInstallation {
+  TERRAIN
+  SALLE
+  PISCINE
+}
+enum StatutCreneau {
+  LIBRE
+  RESERVE
+  BLOQUE
+}
+enum StatutReservation {
+  EN_ATTENTE
+  CONFIRMEE
+  ANNULEE
+}
+enum CanalReservation {
+  EN_LIGNE
+  SUR_PLACE
+}
+enum StatutActivite {
+  PLANIFIEE
+  ANNULEE
+  TERMINEE
+}
+enum StatutInscription {
+  ACTIVE
+  ANNULEE
+}
+enum StatutAbonnement {
+  ACTIF
+  EXPIRE
+}
+enum ModePaiement {
+  EN_LIGNE
+  ESPECES
+  CARTE
+}
+enum StatutPaiement {
+  ENREGISTRE
+  REFUSE
+}
+enum CanalEnvoi {
+  SMS
+  EMAIL
+}
+enum TypeNotification {
+  CONFIRMATION
+  RAPPEL
+  ANNULATION
+}
+}
+@enduml

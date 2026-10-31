@@ -1,0 +1,8 @@
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam class {
+  BackgroundColor #F5F5F5
+  BorderColor #444444
+  ArrowColor #444444
+}
+hide empty members

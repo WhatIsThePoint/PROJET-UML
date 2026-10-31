@@ -1,0 +1,365 @@
+' One diagram per class. Each @startuml block produces its own image,
+' named after the block (Utilisateur.png, Client.png, ...).
+' Keep style.iuml in the same folder.
+
+@startuml Utilisateur
+!include style.iuml
+title Classe Utilisateur
+abstract class Utilisateur {
+  - id : int
+  - nom : String
+  - prenom : String
+  - email : String
+  - telephone : String
+  - motDePasse : String
+  - statut : StatutCompte
+  + sAuthentifier() : boolean
+  + verifierCode(code : String) : boolean
+  + renvoyerCode() : void
+}
+class Client
+class Coach
+class Receptionniste
+class Administrateur
+class CodeVerification
+class Notification
+Utilisateur <|-- Client
+Utilisateur <|-- Coach
+Utilisateur <|-- Receptionniste
+Utilisateur <|-- Administrateur
+Utilisateur "1" -- "0..*" CodeVerification : reçoit
+Utilisateur "1" -- "0..*" Notification : reçoit
+@enduml
+
+@startuml Client
+!include style.iuml
+title Classe Client
+class Client {
+  + creerCompte() : void
+  + consulterInstallations() : List<Installation>
+  + reserverCreneau(c : Creneau) : Reservation
+  + modifierReservation(r : Reservation) : void
+  + annulerReservation(r : Reservation) : void
+  + sInscrire(a : Activite) : Inscription
+  + annulerInscription(i : Inscription) : void
+  + souscrireAbonnement(t : Tarif) : Abonnement
+  + renouvelerAbonnement(a : Abonnement) : void
+  + payerEnLigne(p : Paiement) : void
+}
+class Utilisateur
+class Reservation
+class Inscription
+class Abonnement
+Utilisateur <|-- Client
+Client "1" -- "0..*" Reservation : effectue
+Client "1" -- "0..*" Inscription : réalise
+Client "1" -- "0..*" Abonnement : souscrit
+@enduml
+
+@startuml Coach
+!include style.iuml
+title Classe Coach
+class Coach {
+  - specialite : String
+  + consulterPlanning() : List<Cours>
+  + creerCours() : Cours
+  + modifierCours(c : Cours) : void
+  + annulerCours(c : Cours) : void
+  + consulterListeInscrits(c : Cours) : List<Inscription>
+  + marquerPresence(i : Inscription) : void
+}
+class Utilisateur
+class Cours
+Utilisateur <|-- Coach
+Coach "1" -- "0..*" Cours : anime
+@enduml
+
+@startuml Receptionniste
+!include style.iuml
+title Classe Réceptionniste
+class Receptionniste {
+  + enregistrerReservation() : Reservation
+  + modifierReservation(r : Reservation) : void
+  + annulerReservation(r : Reservation) : void
+  + enregistrerPaiement(r : Reservation) : Paiement
+  + envoyerConfirmation(p : Paiement) : void
+}
+class Utilisateur
+class Reservation
+class Paiement
+Utilisateur <|-- Receptionniste
+Receptionniste "0..1" -- "0..*" Reservation : enregistre
+Receptionniste "0..1" -- "0..*" Paiement : enregistre
+@enduml
+
+@startuml Administrateur
+!include style.iuml
+title Classe Administrateur
+class Administrateur {
+  + gererInstallations() : void
+  + gererTarifs() : void
+  + gererUtilisateurs() : void
+  + creerTournoi() : Tournoi
+  + modifierTournoi(t : Tournoi) : void
+  + annulerTournoi(t : Tournoi) : void
+  + consulterStatistiques() : void
+}
+class Utilisateur
+class Tournoi
+Utilisateur <|-- Administrateur
+Administrateur "1" -- "0..*" Tournoi : organise
+@enduml
+
+@startuml Installation
+!include style.iuml
+title Classe Installation
+class Installation {
+  - id : int
+  - nom : String
+  - sport : String
+  - type : TypeInstallation
+  - capacite : int
+  - actif : boolean
+  + ajouter() : void
+  + modifier() : void
+  + desactiver() : void
+  + verifierDisponibilite(c : Creneau) : boolean
+}
+class Horaire
+class Creneau
+class Reservation
+Installation "1" *-- "1..*" Horaire : définit
+Installation "1" *-- "0..*" Creneau : propose
+Reservation "0..*" -- "1" Installation : concerne
+@enduml
+
+@startuml Horaire
+!include style.iuml
+title Classe Horaire
+class Horaire {
+  - jourSemaine : String
+  - heureOuverture : Time
+  - heureFermeture : Time
+}
+class Installation
+Installation "1" *-- "1..*" Horaire : définit
+@enduml
+
+@startuml Creneau
+!include style.iuml
+title Classe Créneau
+class Creneau {
+  - id : int
+  - date : Date
+  - heureDebut : Time
+  - heureFin : Time
+  - statut : StatutCreneau
+  + estDisponible() : boolean
+}
+class Installation
+class Reservation
+class Activite
+Installation "1" *-- "0..*" Creneau : propose
+Reservation "0..1" -- "1" Creneau : occupe
+Activite "0..1" -- "1..*" Creneau : réserve
+@enduml
+
+@startuml Reservation
+!include style.iuml
+title Classe Réservation
+class Reservation {
+  - id : int
+  - dateCreation : Date
+  - statut : StatutReservation
+  - canal : CanalReservation
+  - montant : double
+  + confirmer() : void
+  + modifier() : void
+  + annuler() : void
+}
+class Client
+class Receptionniste
+class Creneau
+class Installation
+class Tarif
+class Paiement
+Client "1" -- "0..*" Reservation : effectue
+Receptionniste "0..1" -- "0..*" Reservation : enregistre
+Reservation "0..1" -- "1" Creneau : occupe
+Reservation "0..*" -- "1" Installation : concerne
+Reservation "0..*" -- "1" Tarif : facturée selon
+Paiement "0..*" -- "0..1" Reservation : règle
+@enduml
+
+@startuml Activite
+!include style.iuml
+title Classe Activité
+abstract class Activite {
+  - id : int
+  - titre : String
+  - date : Date
+  - capacite : int
+  - statut : StatutActivite
+  + estComplete() : boolean
+}
+class Cours
+class Tournoi
+class Creneau
+class Inscription
+Activite <|-- Cours
+Activite <|-- Tournoi
+Activite "0..1" -- "1..*" Creneau : réserve
+Activite "1" -- "0..*" Inscription : reçoit
+@enduml
+
+@startuml Cours
+!include style.iuml
+title Classe Cours
+class Cours {
+  - niveau : String
+  + verifierDisponibiliteTerrain() : boolean
+}
+class Activite
+class Coach
+Activite <|-- Cours
+Coach "1" -- "0..*" Cours : anime
+@enduml
+
+@startuml Tournoi
+!include style.iuml
+title Classe Tournoi
+class Tournoi {
+  - dateDebut : Date
+  - dateFin : Date
+  - fraisInscription : double
+  - format : String
+  + reserverTerrains() : void
+}
+class Activite
+class Administrateur
+Activite <|-- Tournoi
+Administrateur "1" -- "0..*" Tournoi : organise
+@enduml
+
+@startuml Inscription
+!include style.iuml
+title Classe Inscription
+class Inscription {
+  - id : int
+  - dateInscription : Date
+  - statut : StatutInscription
+  - present : boolean
+  + annuler() : void
+}
+class Client
+class Activite
+class Paiement
+Client "1" -- "0..*" Inscription : réalise
+Activite "1" -- "0..*" Inscription : reçoit
+Paiement "0..*" -- "0..1" Inscription : règle
+@enduml
+
+@startuml Abonnement
+!include style.iuml
+title Classe Abonnement
+class Abonnement {
+  - id : int
+  - type : String
+  - dateDebut : Date
+  - dateFin : Date
+  - statut : StatutAbonnement
+  + renouveler() : void
+  + estActif() : boolean
+}
+class Client
+class Tarif
+class Paiement
+Client "1" -- "0..*" Abonnement : souscrit
+Abonnement "0..*" -- "1" Tarif : basé sur
+Paiement "0..*" -- "0..1" Abonnement : règle
+@enduml
+
+@startuml Tarif
+!include style.iuml
+title Classe Tarif
+class Tarif {
+  - id : int
+  - libelle : String
+  - montant : double
+  - sport : String
+  - typeClient : String
+  + definir() : void
+  + modifier() : void
+}
+class Abonnement
+class Reservation
+class Promotion
+Abonnement "0..*" -- "1" Tarif : basé sur
+Reservation "0..*" -- "1" Tarif : facturée selon
+Tarif "0..*" -- "0..*" Promotion : peut avoir
+@enduml
+
+@startuml Promotion
+!include style.iuml
+title Classe Promotion
+class Promotion {
+  - code : String
+  - pourcentage : double
+  - dateDebut : Date
+  - dateFin : Date
+  + appliquer(t : Tarif) : double
+}
+class Tarif
+Tarif "0..*" -- "0..*" Promotion : peut avoir
+@enduml
+
+@startuml Paiement
+!include style.iuml
+title Classe Paiement
+class Paiement {
+  - id : int
+  - montant : double
+  - date : Date
+  - mode : ModePaiement
+  - statut : StatutPaiement
+  + enregistrer() : void
+  + genererRecu() : void
+}
+class Reservation
+class Abonnement
+class Inscription
+class Receptionniste
+Paiement "0..*" -- "0..1" Reservation : règle
+Paiement "0..*" -- "0..1" Abonnement : règle
+Paiement "0..*" -- "0..1" Inscription : règle
+Receptionniste "0..1" -- "0..*" Paiement : enregistre
+@enduml
+
+@startuml CodeVerification
+!include style.iuml
+title Classe CodeVerification
+class CodeVerification {
+  - code : String
+  - dateExpiration : DateTime
+  - canal : CanalEnvoi
+  - utilise : boolean
+  + estValide() : boolean
+}
+class Utilisateur
+Utilisateur "1" -- "0..*" CodeVerification : reçoit
+@enduml
+
+@startuml Notification
+!include style.iuml
+title Classe Notification
+class Notification {
+  - id : int
+  - type : TypeNotification
+  - message : String
+  - dateEnvoi : DateTime
+  - canal : CanalEnvoi
+  + envoyer() : void
+}
+class Utilisateur
+Utilisateur "1" -- "0..*" Notification : reçoit
+@enduml
