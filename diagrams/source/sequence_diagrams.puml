@@ -1,0 +1,141 @@
+' Diagrammes de séquence : Interface / Controller / Base de données
+' Chaque bloc @startuml produit son propre fichier image.
+
+' ===================== 10.1 Créer un tournoi =====================
+@startuml SeqCreerTournoi
+title Séquence : Créer un tournoi
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+
+actor Admin as A
+boundary "Interface" as UI
+control "TournoiController" as C
+database "Base de données" as DB
+
+A -> UI : créer un tournoi
+UI --> A : afficherFormulaire()
+A -> UI : saisir(titre, dateDebut, dateFin,\ncapacite, fraisInscription, format)
+UI -> C : creerTournoi(données)
+C -> C : verifierDonnees()
+
+alt données invalides
+  C --> UI : erreur
+  UI --> A : afficher message d'erreur
+else données valides
+  C -> DB : rechercherTerrainsDisponibles(dateDebut, dateFin)
+  DB --> C : liste des terrains (Installation, Creneau)
+  C --> UI : terrains disponibles
+  UI --> A : afficherTerrains()
+  A -> UI : choisir les terrains
+  UI -> C : reserverTerrains(terrains)
+
+  loop pour chaque terrain
+    C -> DB : reserverCreneau(terrain)\n[statut = RESERVE]
+    DB --> C : créneau réservé
+  end
+
+  C -> DB : enregistrerTournoi(données, créneaux)\n[statut = PLANIFIEE]
+  DB --> C : tournoi enregistré
+  C --> UI : confirmation
+  UI --> A : « Tournoi créé avec succès »
+end
+@enduml
+
+' ===================== 10.2 Gérer les paiements sur place =====================
+@startuml SeqPaiementSurPlace
+title Séquence : Gérer les paiements sur place
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+
+actor Réceptionniste as R
+boundary "Interface" as UI
+control "PaiementController" as C
+database "Base de données" as DB
+
+R -> UI : gérer les paiements sur place
+UI --> R : afficherFormulairePaiement()
+R -> UI : saisir les informations de réservation
+UI -> C : enregistrerPaiement(idReservation, montant, mode)
+C -> DB : chercherReservation(idReservation)
+DB --> C : réservation / introuvable
+C -> C : verifierDonnees()
+
+alt réservation trouvée et données valides
+  C -> DB : enregistrerPaiement(paiement)\n[statut = ENREGISTRE]
+  DB --> C : paiement enregistré
+  C --> UI : succès
+  UI --> R : « Paiement enregistré »
+
+  opt le réceptionniste demande l'envoi d'une confirmation
+    R -> UI : demander l'envoi de la confirmation
+    UI -> C : envoyerConfirmation(paiement)
+    C -> DB : recupererCoordonneesClient(idReservation)
+    DB --> C : email / téléphone du client
+    C -> C : creerNotification(CONFIRMATION)\nenvoyer()
+    C -> DB : enregistrerNotification()
+    DB --> C : notification enregistrée
+    C --> UI : confirmation envoyée
+    UI --> R : « Confirmation envoyée au client »
+  end
+else données invalides ou réservation introuvable
+  C --> UI : erreur
+  UI --> R : afficher le message d'erreur
+end
+@enduml
+
+' ===================== 10.3 Authentification (2FA) =====================
+@startuml SeqAuthentification
+title Séquence : Authentification à deux facteurs (2FA)
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+
+actor Utilisateur as U
+boundary "Interface" as UI
+control "AuthController" as C
+database "Base de données" as DB
+participant "Service SMS / Email" as S <<système externe>>
+
+U -> UI : saisir(email, motDePasse)
+UI -> C : sAuthentifier(email, motDePasse)
+C -> DB : chercherUtilisateur(email)
+DB --> C : utilisateur (motDePasse, statut)
+C -> C : verifier identifiants\net statut == ACTIF
+
+alt identifiants valides
+  C -> C : genererCode()
+  C -> DB : enregistrerCodeVerification(code, dateExpiration, canal)
+  DB --> C : code enregistré
+  C -> S : envoyerCode(destinataire, code)
+  S --> U : code de vérification (SMS / Email)
+  C --> UI : demanderCode
+  UI --> U : afficherChampCode()
+
+  opt code non reçu
+    U -> UI : renvoyer le code
+    UI -> C : renvoyerCode()
+    C -> DB : enregistrerCodeVerification(nouveauCode)
+    DB --> C : code enregistré
+    C -> S : envoyerCode(destinataire, nouveauCode)
+    S --> U : nouveau code
+  end
+
+  U -> UI : saisir(code)
+  UI -> C : verifierCode(code)
+  C -> DB : chercherCodeVerification(utilisateur, code)
+  DB --> C : codeVerification
+  C -> C : estValide()\n[non expiré, non utilisé]
+
+  alt code valide
+    C -> DB : marquerCodeUtilise()
+    DB --> C : ok
+    C --> UI : authentification réussie
+    UI --> U : « Connexion avec succès »
+  else code invalide
+    C --> UI : code incorrect
+    UI --> U : « Code incorrect »
+  end
+else identifiants invalides
+  C --> UI : échec
+  UI --> U : « Coordonnées incorrectes »
+end
+@enduml
